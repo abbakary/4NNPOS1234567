@@ -571,12 +571,18 @@ def api_upload_extract_invoice(request):
             except Exception:
                 pass
 
+        # Redirect to order_detail if order exists, otherwise to invoice_detail
+        if order:
+            redirect_url = request.build_absolute_uri(f'/tracker/orders/{order.id}/')
+        else:
+            redirect_url = request.build_absolute_uri(f'/tracker/invoices/{inv.id}/')
+
         return JsonResponse({
             'success': True,
             'message': reused_message,
             'invoice_id': inv.id,
             'invoice_number': inv.invoice_number,
-            'redirect_url': request.build_absolute_uri(f'/tracker/invoices/{inv.id}/')
+            'redirect_url': redirect_url
         })
 
     except Exception as e:

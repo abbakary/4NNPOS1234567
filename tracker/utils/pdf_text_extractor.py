@@ -465,41 +465,48 @@ def extract_line_items_corrected(lines):
 def parse_item_complete(item_lines, item_number):
     """
     Parse a complete item with proper column separation and value calculation.
+    Handles cases where VAT% appears after rate value.
     """
     if not item_lines:
         return None
-    
+
     # Extract item code from first line if available
     item_code = item_lines[0]['code']
-    
+
     # Combine all lines into one text block
     full_text = ' '.join([line['line'] for line in item_lines])
-    
+
     # Try to extract item code from the text if not already found
     if not item_code:
         code_match = re.search(r'\b(\d{4,15})\b', full_text)
         if code_match:
             item_code = code_match.group(1)
             logger.info(f"Extracted item code from text: {item_code}")
-    
-    # IMPROVED PATTERN MATCHING - Look for complete column structure
-    # Pattern: Description Unit Qty Rate Value
-    pattern_complete = r'^(.+?)\s+(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\s+(\d+)\s+([\d,]+\.?\d{2})\s+([\d,]+\.?\d{2})$'
-    match_complete = re.search(pattern_complete, full_text)
-    
+
+    # CRITICAL: Extract values exactly as shown in the document - NO CALCULATIONS
+    # This preserves the actual invoice data without risk of recalculation errors
+
+    # Remove VAT percentages temporarily for pattern matching, but keep track of them
+    cleaned_text = re.sub(r'\s*\d+\.?\d*%\s*', ' ', full_text).strip()
+
+    # Primary Pattern: Description Unit Qty Rate Value (most complete)
+    # Matches: "DESCRIPTION UNIT QTY RATE VALUE"
+    pattern_complete = r'^(.+?)\s+(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\s+(\d+)\s+([\d,]+\.?\d{1,2})\s+([\d,]+\.?\d{1,2})$'
+    match_complete = re.search(pattern_complete, cleaned_text)
+
     if match_complete:
         description = match_complete.group(1).strip()
         unit = match_complete.group(2).upper()
         qty = int(match_complete.group(3))
         rate = Decimal(match_complete.group(4).replace(',', ''))
         value = Decimal(match_complete.group(5).replace(',', ''))
-        
+
         # Remove item code from description if present
         if item_code and item_code in description:
             description = description.replace(item_code, '', 1).strip()
-        
-        logger.info(f"Complete pattern match - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {value}")
-        
+
+        logger.info(f"Complete pattern match - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {value} (extracted as-is)")
+
         return {
             'code': item_code,
             'description': clean_description(description),
@@ -508,26 +515,39 @@ def parse_item_complete(item_lines, item_number):
             'rate': rate,
             'value': value
         }
-    
-    # Pattern for items with unit after description
-    pattern_with_unit = r'^(.+?)\s+(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\s+(\d+)\s+([\d,]+\.?\d{2})'
-    match_with_unit = re.search(pattern_with_unit, full_text)
-    
+
+    # Secondary Pattern: Description Unit Qty Rate (no Value found - extract what's available)
+    # In this case, extract only what we have - do NOT calculate value
+    pattern_with_unit = r'^(.+?)\s+(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\s+(\d+)\s+([\d,]+\.?\d{1,2})'
+    match_with_unit = re.search(pattern_with_unit, cleaned_text)
+
     if match_with_unit:
         description = match_with_unit.group(1).strip()
         unit = match_with_unit.group(2).upper()
         qty = int(match_with_unit.group(3))
         rate = Decimal(match_with_unit.group(4).replace(',', ''))
-        
-        # Calculate value
-        value = rate * Decimal(qty)
-        
+
+        # Try to find Value separately from the remaining text
+        # Look for another large number after the rate
+        remaining = cleaned_text[match_with_unit.end():].strip()
+        value = None
+
+        # Try to extract value from the remaining text (should be the next large number)
+        if remaining:
+            value_match = re.search(r'([\d,]+\.?\d{1,2})', remaining)
+            if value_match:
+                value = Decimal(value_match.group(1).replace(',', ''))
+                logger.info(f"Unit pattern match + extracted Value separately - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {value}")
+
+        # If value couldn't be extracted separately, use rate (as a last resort, not calculated)
+        if value is None:
+            value = rate
+            logger.info(f"Unit pattern match (no Value found) - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {rate} (no calculation)")
+
         # Remove item code from description if present
         if item_code and item_code in description:
             description = description.replace(item_code, '', 1).strip()
-        
-        logger.info(f"Unit pattern match - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {value}")
-        
+
         return {
             'code': item_code,
             'description': clean_description(description),
@@ -537,15 +557,55 @@ def parse_item_complete(item_lines, item_number):
             'value': value
         }
     
-    # Pattern for basic quantity and rate
+    # Pattern for basic quantity and rate - extract without calculation
     pattern_basic = r'(\d+)\s+([\d,]+\.?\d{2})'
     matches_basic = list(re.finditer(pattern_basic, full_text))
-    
-    if len(matches_basic) >= 2:
-        # Use the first match for quantity, second for rate
+
+    if len(matches_basic) >= 3:
+        # Try to extract: qty, rate, value (in that order) without calculation
         qty = int(matches_basic[0].group(1))
         rate = Decimal(matches_basic[1].group(2).replace(',', ''))
-        value = rate * Decimal(qty)
+        value = Decimal(matches_basic[2].group(2).replace(',', ''))
+        logger.info(f"Basic pattern match with Value - Code: {item_code}, Qty: {qty}, Rate: {rate}, Value: {value} (extracted as-is)")
+
+        # Extract unit
+        unit = None
+        unit_match = re.search(r'\b(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\b', full_text, re.I)
+        if unit_match:
+            unit = unit_match.group(1).upper()
+
+        # Build description by removing numbers, units, and codes
+        description = full_text
+
+        # Remove item code
+        if item_code and item_code in description:
+            description = description.replace(item_code, '', 1).strip()
+
+        # Remove quantities and rates
+        for match in reversed(matches_basic[:3]):  # Only remove first 3 matches
+            description = description.replace(match.group(0), '', 1).strip()
+
+        # Remove unit
+        if unit:
+            description = re.sub(r'\b' + re.escape(unit) + r'\b', '', description, flags=re.I).strip()
+
+        # Remove percentages and other noise
+        description = re.sub(r'\d+\.?\d*\%', '', description).strip()
+
+        return {
+            'code': item_code,
+            'description': clean_description(description),
+            'unit': unit,
+            'qty': qty,
+            'rate': rate,
+            'value': value
+        }
+    elif len(matches_basic) >= 2:
+        # Only qty and rate found - don't calculate value
+        qty = int(matches_basic[0].group(1))
+        rate = Decimal(matches_basic[1].group(2).replace(',', ''))
+        value = rate  # Use rate as fallback, not calculation
+        logger.info(f"Basic pattern match (no Value found) - Code: {item_code}, Qty: {qty}, Rate: {rate}, Value: {value} (no calculation)")
         
         # Extract unit
         unit = None
@@ -582,61 +642,80 @@ def parse_item_complete(item_lines, item_number):
             'value': value
         }
     
-    # Fallback: Extract numbers and try to make sense of them
+    # Fallback: Extract monetary amounts (at least 2 decimal places)
+    # These are more likely to be prices than plain integers
     numbers = []
-    number_matches = re.finditer(r'([\d,]+\.?\d*)', full_text)
-    for match in number_matches:
+
+    # First, extract all properly formatted numbers with 2 decimal places (monetary amounts)
+    monetary_matches = list(re.finditer(r'([\d,]+\.\d{2})', cleaned_text))
+
+    # Then, extract quantities (plain integers less than 100)
+    quantity_matches = list(re.finditer(r'\b(\d{1,2})\b', cleaned_text))
+
+    # Process monetary amounts first (these are typically rate and value)
+    for match in monetary_matches:
         try:
             num_str = match.group(1).replace(',', '')
             num = float(num_str)
             numbers.append({
                 'value': num,
                 'original': match.group(1),
-                'is_integer': num == int(num) and num < 10000
+                'is_integer': False,
+                'is_monetary': True,
+                'position': match.start()
             })
+        except:
+            continue
+
+    # Add quantities
+    for match in quantity_matches:
+        try:
+            num = int(match.group(1))
+            if 0 < num < 100:  # Valid quantity range
+                numbers.append({
+                    'value': num,
+                    'original': match.group(1),
+                    'is_integer': True,
+                    'is_monetary': False,
+                    'position': match.start()
+                })
         except:
             continue
     
     # Extract unit
     unit = None
-    unit_match = re.search(r'\b(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\b', full_text, re.I)
+    unit_match = re.search(r'\b(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\b', cleaned_text, re.I)
     if unit_match:
         unit = unit_match.group(1).upper()
-    
-    # Identify quantities and values
-    quantities = [n for n in numbers if n['is_integer'] and 0 < n['value'] < 1000]
-    potential_rates = [n for n in numbers if not n['is_integer'] or n['value'] >= 1000]
-    
-    # Determine quantity and rate
+
+    # Extract numbers in order without any calculations
+    # Strategy: Find qty (integer), then first monetary amount = Rate, second monetary amount = Value
     quantity = 1
-    rate = None
-    value = None
-    
-    if quantities and potential_rates:
-        # Use smallest integer as quantity, largest number as potential value
-        quantity = int(min([q['value'] for q in quantities]))
-        largest_value = max([r['value'] for r in potential_rates])
-        
-        # Check if largest value makes sense as total value
-        if largest_value > 1000:  # Likely a total value
-            value = Decimal(str(largest_value))
-            rate = value / Decimal(quantity)
-        else:
-            rate = Decimal(str(largest_value))
-            value = rate * Decimal(quantity)
-    elif quantities:
-        quantity = int(min([q['value'] for q in quantities]))
-        # No rate found, set default
-        rate = Decimal('0')
-        value = Decimal('0')
-    elif potential_rates:
-        # Only rates found, assume quantity 1
-        rate = Decimal(str(max([r['value'] for r in potential_rates])))
-        value = rate
-    else:
-        # No numbers found
-        rate = Decimal('0')
-        value = Decimal('0')
+    rate = Decimal('0')
+    value = Decimal('0')
+
+    # Separate by type
+    integers = [n for n in numbers if n['is_integer']]
+    monetaries = [n for n in numbers if n['is_monetary']]
+
+    # Extract quantity (smallest integer, preferably)
+    if integers:
+        quantity = int(min([n['value'] for n in integers]))
+
+    # Extract rate and value from monetary amounts (should be in order as they appear)
+    # Sort by position to maintain order in document
+    monetaries_sorted = sorted(monetaries, key=lambda x: x.get('position', 0))
+
+    if len(monetaries_sorted) >= 2:
+        # First monetary = Rate, Second = Value
+        rate = Decimal(str(monetaries_sorted[0]['value']))
+        value = Decimal(str(monetaries_sorted[1]['value']))
+        logger.info(f"Fallback extraction - Qty: {quantity}, Rate: {rate}, Value: {value} (extracted in document order, no calculation)")
+    elif len(monetaries_sorted) >= 1:
+        # Only one monetary amount - could be either rate or value
+        rate = Decimal(str(monetaries_sorted[0]['value']))
+        value = rate  # Use same value, no calculation
+        logger.info(f"Fallback extraction (single monetary) - Qty: {quantity}, Rate: {rate}, Value: {value} (no calculation)")
     
     # Build description
     description = full_text
@@ -674,24 +753,22 @@ def clean_description(description):
     """Clean and normalize description text."""
     if not description:
         return ""
-    
+
     # Remove extra whitespace
     description = re.sub(r'\s+', ' ', description).strip()
-    
+
     # Remove common prefixes/suffixes that might be left after number removal
     description = re.sub(r'^[-\s]*|[-\s]*$', '', description)
-    
-    # Remove any remaining isolated numbers or symbols
+
+    # Remove any remaining isolated numbers or symbols at word boundaries
     description = re.sub(r'\s+[-\*\.]\s+', ' ', description)
-    
-    # Remove percentages completely
+
+    # Remove percentages completely (these are VAT indicators, not part of description)
     description = re.sub(r'\d+\.?\d*\%', '', description).strip()
-    
-    # Remove common noise words
-    noise_words = ['FOR', 'CAR', 'TYRES', 'RIMS', 'SMALL']
-    for word in noise_words:
-        description = re.sub(r'\b' + word + r'\b', '', description, flags=re.I).strip()
-    
+
+    # Don't remove noise words - they may be legitimate parts of product descriptions
+    # e.g., "WHEEL BALANCE ALLOYD RIMS" or "VALVE FOR CAR TUBELESS TYRES"
+
     return description
 
 def extract_from_bytes(file_bytes, filename: str = '') -> dict:

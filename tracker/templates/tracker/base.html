@@ -369,21 +369,8 @@
                                     </ul>
                                 </li>
 
-                                <!-- Invoices -->
-                                <li class="sidebar-list">
-                                    <i class="fa fa-file-invoice"></i>
-                                    <a class="sidebar-link sidebar-title" href="#">
-                                        <svg class="stroke-icon">
-                                            <use href="{% static 'assets/svg/icon-sprite.svg' %}#stroke-file"></use>
-                                        </svg>
-                                        <span>Invoices</span>
-                                    </a>
-                                    <ul class="sidebar-submenu">
-                                        <li><a href="{% url 'tracker:invoice_list' %}">All Invoices</a></li>
-                                        <li><a href="{% url 'tracker:invoice_upload' %}">Upload Invoice</a></li>
-
-                                    </ul>
-                                </li>
+                                <!-- Invoices - Accessed from Order/Customer pages -->
+                                <!-- Note: Invoice upload is embedded in order detail pages -->
 
 
 
