@@ -642,19 +642,43 @@ def parse_item_complete(item_lines, item_number):
             'value': value
         }
     
-    # Fallback: Extract numbers and try to make sense of them
-    # Use cleaned_text that has VAT% removed
+    # Fallback: Extract monetary amounts (at least 2 decimal places)
+    # These are more likely to be prices than plain integers
     numbers = []
-    number_matches = re.finditer(r'([\d,]+\.?\d*)', cleaned_text)
-    for match in number_matches:
+
+    # First, extract all properly formatted numbers with 2 decimal places (monetary amounts)
+    monetary_matches = list(re.finditer(r'([\d,]+\.\d{2})', cleaned_text))
+
+    # Then, extract quantities (plain integers less than 100)
+    quantity_matches = list(re.finditer(r'\b(\d{1,2})\b', cleaned_text))
+
+    # Process monetary amounts first (these are typically rate and value)
+    for match in monetary_matches:
         try:
             num_str = match.group(1).replace(',', '')
             num = float(num_str)
             numbers.append({
                 'value': num,
                 'original': match.group(1),
-                'is_integer': num == int(num) and num < 10000
+                'is_integer': False,
+                'is_monetary': True,
+                'position': match.start()
             })
+        except:
+            continue
+
+    # Add quantities
+    for match in quantity_matches:
+        try:
+            num = int(match.group(1))
+            if 0 < num < 100:  # Valid quantity range
+                numbers.append({
+                    'value': num,
+                    'original': match.group(1),
+                    'is_integer': True,
+                    'is_monetary': False,
+                    'position': match.start()
+                })
         except:
             continue
     
