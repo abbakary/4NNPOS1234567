@@ -263,6 +263,63 @@
     if (progressWrap) progressWrap.style.display = p > 0 && p < 100 ? 'block' : (p >= 100 ? 'block' : 'none');
   }
 
+  invoiceForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    if (!fileInput.files || !fileInput.files[0]) {
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = '<i class="fa fa-warning me-2"></i>No PDF file was uploaded or extracted.';
+      errorBox.className = 'alert alert-warning';
+      return;
+    }
+
+    createInvoiceBtn.disabled = true;
+    const originalBtnText = createInvoiceBtn.innerHTML;
+    createInvoiceBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>Creating...';
+
+    try {
+      const formData = new FormData(invoiceForm);
+
+      const response = await fetch(invoiceForm.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        errorBox.style.display = 'none';
+        successMsg.innerHTML = '<i class="fa fa-check-circle me-2"></i>Invoice created successfully! Redirecting...';
+        successMsg.style.display = 'block';
+
+        setTimeout(() => {
+          if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+          } else {
+            window.location.reload();
+          }
+        }, 1500);
+      } else {
+        throw new Error(data.message || 'Failed to create invoice');
+      }
+    } catch (err) {
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = '<i class="fa fa-exclamation-triangle me-2"></i>' + (err?.message || 'Failed to create invoice');
+      errorBox.className = 'alert alert-danger';
+      console.error('Form submission error:', err);
+    } finally {
+      createInvoiceBtn.disabled = false;
+      createInvoiceBtn.innerHTML = originalBtnText;
+    }
+  });
+
   uploadBtn.addEventListener('click', async function() {
     if (!fileInput || !fileInput.files || !fileInput.files[0]) {
       errorBox.style.display = 'block';
