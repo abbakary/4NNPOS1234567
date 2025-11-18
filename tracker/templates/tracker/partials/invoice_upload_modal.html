@@ -299,3 +299,120 @@
     </div>
   </div>
 </div>
+
+<style>
+/* Line items table responsive styling */
+.line-items-table {
+  font-size: 0.85rem;
+}
+
+.line-items-table th,
+.line-items-table td {
+  padding: 0.5rem 0.4rem;
+  overflow: hidden;
+}
+
+.line-item-col-num {
+  width: 50px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.line-item-col-code {
+  width: 100px;
+  min-width: 100px;
+}
+
+.line-item-col-desc {
+  min-width: 180px;
+  flex-grow: 1;
+}
+
+.line-item-col-unit {
+  width: 70px;
+}
+
+.line-item-col-qty {
+  width: 80px;
+}
+
+.line-item-col-rate {
+  width: 110px;
+}
+
+.line-item-col-actions {
+  width: 60px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.line-items-table input[type="text"],
+.line-items-table input[type="number"] {
+  width: 100%;
+  padding: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.line-items-table input[type="text"]::placeholder,
+.line-items-table input[type="number"]::placeholder {
+  font-size: 0.8rem;
+}
+
+/* Remove input borders for cleaner look */
+.line-items-table input[type="text"],
+.line-items-table input[type="number"] {
+  border: 1px solid #dee2e6;
+}
+
+.line-items-table input[type="text"]:focus,
+.line-items-table input[type="number"]:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Make description column wrap if needed */
+.line-items-table .line-item-col-desc {
+  word-break: break-word;
+  white-space: normal;
+}
+
+/* Remove button styling for better consistency */
+.line-items-table .remove-line-item {
+  padding: 0.3rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+@media (max-width: 1200px) {
+  .line-item-col-desc {
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .line-items-table th,
+  .line-items-table td {
+    padding: 0.3rem 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .line-items-table input[type="text"],
+  .line-items-table input[type="number"] {
+    padding: 0.2rem;
+    font-size: 0.75rem;
+  }
+
+  .line-item-col-code {
+    width: 80px;
+    min-width: 80px;
+  }
+
+  .line-item-col-desc {
+    min-width: 120px;
+  }
+
+  .line-item-col-rate {
+    width: 90px;
+  }
+}
+</style>
