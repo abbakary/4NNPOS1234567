@@ -787,19 +787,26 @@
                         <label class="form-label fw-medium">
                             <i class="fa fa-car me-2 text-info"></i>Vehicle Plate Number
                         </label>
-                        {% with first_vehicle=customer.vehicles.first %}
                         <div class="input-group">
-                            <input type="text" id="quickStartPlate" class="form-control" value="{% if first_vehicle %}{{ first_vehicle.plate_number }}{% endif %}" placeholder="e.g., ABC-1234" style="text-transform: uppercase;" />
-                            {% if first_vehicle %}
-                            <button type="button" class="btn btn-outline-secondary" id="clearPlateBtn" title="Clear and enter new plate">
+                            {% if customer.vehicles.exists %}
+                            <select id="vehicleSelector" class="form-select" style="max-width: 300px;">
+                                <option value="">-- Select existing plate or enter new --</option>
+                                {% for vehicle in customer.vehicles.all %}
+                                <option value="{{ vehicle.plate_number }}">{{ vehicle.plate_number }}</option>
+                                {% endfor %}
+                                <option value="__new__">+ Enter New Plate</option>
+                            </select>
+                            <input type="text" id="quickStartPlate" class="form-control" placeholder="e.g., ABC-1234" style="text-transform: uppercase; display: none;" />
+                            {% else %}
+                            <input type="text" id="quickStartPlate" class="form-control" placeholder="e.g., ABC-1234" style="text-transform: uppercase;" />
+                            {% endif %}
+                            <button type="button" class="btn btn-outline-secondary" id="clearPlateBtn" title="Clear and select from dropdown" style="{% if not customer.vehicles.exists %}display: none;{% endif %}">
                                 <i class="fa fa-times"></i>
                             </button>
-                            {% endif %}
                         </div>
-                        {% endwith %}
                         <small class="text-muted d-block mt-1">
                             <i class="fa fa-info-circle me-1"></i>
-                            {% if first_vehicle %}Use existing plate or enter a new one{% else %}Enter vehicle plate number{% endif %}
+                            {% if customer.vehicles.exists %}Select an existing vehicle or enter a new plate{% else %}Enter vehicle plate number{% endif %}
                         </small>
                     </div>
                     <div class="col-lg-4">
