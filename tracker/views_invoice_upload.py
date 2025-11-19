@@ -544,7 +544,7 @@ def api_create_invoice_from_upload(request):
                 'invoice_number': inv.invoice_number,
                 'order_id': order.id,
                 'customer_id': customer_obj.id,
-                'redirect_url': f'/tracker/orders/started/{order.id}/'
+                'redirect_url': f'/orders/started/{order.id}/'
             })
     
     except Exception as e:
