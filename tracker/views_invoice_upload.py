@@ -381,12 +381,21 @@ def api_create_invoice_from_upload(request):
                     logger.warning(f"Could not find existing order {selected_order_id}: {e}")
                     pass
 
-            # If no existing order, create new one
+            # Extract item codes for order type detection
+            item_codes = request.POST.getlist('item_code[]')
+            item_codes = [code.strip() for code in item_codes if code and code.strip()]
+
+            # Determine order type from item codes
+            from tracker.utils.order_type_detector import determine_order_type_from_codes
+            detected_order_type, categories, mapping_info = determine_order_type_from_codes(item_codes)
+            logger.info(f"Detected order type from codes: {detected_order_type}, categories: {categories}")
+
+            # If no existing order, create new one with detected type
             if not order:
                 try:
                     order = OrderService.create_order(
                         customer=customer_obj,
-                        order_type='service',
+                        order_type=detected_order_type,
                         branch=user_branch,
                         vehicle=vehicle,
                         description='Created from invoice upload'
@@ -559,6 +568,18 @@ def api_create_invoice_from_upload(request):
             inv.tax_amount = tax_amount
             inv.total_amount = total_amount or (subtotal + tax_amount)
             inv.save(update_fields=['subtotal', 'tax_amount', 'total_amount'])
+
+            # Update order with detected order type and mixed categories
+            if order and detected_order_type:
+                try:
+                    order.type = detected_order_type
+                    if detected_order_type == 'mixed' and categories:
+                        import json
+                        order.mixed_categories = json.dumps(categories)
+                    order.save(update_fields=['type', 'mixed_categories'])
+                    logger.info(f"Updated order {order.id} type to {detected_order_type}, categories: {categories}")
+                except Exception as e:
+                    logger.warning(f"Failed to update order type from detected items: {e}")
 
             # Create payment record if total > 0
             if inv.total_amount > 0:

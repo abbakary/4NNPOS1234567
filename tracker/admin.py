@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer, Vehicle, Order, InventoryItem, Branch, ServiceType, ServiceAddon
+from .models import Customer, Vehicle, Order, InventoryItem, Branch, ServiceType, ServiceAddon, LabourCode
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
@@ -156,6 +156,24 @@ class InventoryItemAdmin(admin.ModelAdmin):
     search_fields = ("name", "brand")
     list_filter = ("created_at",)
     readonly_fields = ("created_at",)
+
+@admin.register(LabourCode)
+class LabourCodeAdmin(admin.ModelAdmin):
+    list_display = ("code", "description", "category", "is_active", "created_at", "updated_at")
+    search_fields = ("code", "description", "category")
+    list_filter = ("category", "is_active", "created_at")
+    readonly_fields = ("created_at", "updated_at")
+
+    fieldsets = (
+        ('Labour Code Information', {
+            'fields': ('code', 'description', 'category', 'is_active'),
+            'classes': ('wide', 'extrapretty'),
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('wide', 'extrapretty'),
+        }),
+    )
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):

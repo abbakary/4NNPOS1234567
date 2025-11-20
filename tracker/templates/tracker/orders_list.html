@@ -1,6 +1,7 @@
 {% extends 'tracker/base.html' %}
 {% load static custom_filters tz %}
 {% load date_filters %}
+{% load order_filters %}
 
 {% block title %}Orders{% endblock %}
 
@@ -223,7 +224,9 @@
                   <option value="all" {% if t == 'all' %}selected{% endif %}>All</option>
                   <option value="service" {% if t == 'service' %}selected{% endif %}>Service</option>
                   <option value="sales" {% if t == 'sales' %}selected{% endif %}>Sales</option>
+                  <option value="labour" {% if t == 'labour' %}selected{% endif %}>Labour</option>
                   <option value="inquiry" {% if t == 'inquiry' %}selected{% endif %}>Inquiry</option>
+                  <option value="mixed" {% if t == 'mixed' %}selected{% endif %}>Mixed</option>
                   {% endwith %}
                 </select>
               </div>
@@ -350,10 +353,14 @@
                 </a>
               </td>
               <td>
-                {% if o.type == 'service' %}
+                {% if o.type == 'mixed' %}
+                  <span class="badge bg-purple rounded-pill"><i class="fa fa-layer-group me-1"></i>{{ o|order_type_display }}</span>
+                {% elif o.type == 'service' %}
                   <span class="badge bg-primary rounded-pill"><i class="fa fa-wrench me-1"></i>Service</span>
                 {% elif o.type == 'sales' %}
                   <span class="badge bg-success rounded-pill"><i class="fa fa-shopping-cart me-1"></i>Sales</span>
+                {% elif o.type == 'labour' %}
+                  <span class="badge bg-warning text-dark rounded-pill"><i class="fa fa-tools me-1"></i>Labour</span>
                 {% elif o.type == 'inquiry' %}
                   <span class="badge bg-info rounded-pill"><i class="fa fa-question-circle me-1"></i>Inquiry</span>
                 {% else %}
@@ -700,6 +707,11 @@ document.addEventListener('DOMContentLoaded', function() {
 /* Enhanced Priority Badges */
 .bg-orange {
   background-color: #ff6b35 !important;
+}
+
+.bg-purple {
+  background-color: #9b59b6 !important;
+  color: white !important;
 }
 
 /* Clean Action Button - No Dropdown Arrow */
