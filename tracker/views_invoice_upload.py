@@ -569,6 +569,18 @@ def api_create_invoice_from_upload(request):
             inv.total_amount = total_amount or (subtotal + tax_amount)
             inv.save(update_fields=['subtotal', 'tax_amount', 'total_amount'])
 
+            # Update order with detected order type and mixed categories
+            if order and detected_order_type:
+                try:
+                    order.type = detected_order_type
+                    if detected_order_type == 'mixed' and categories:
+                        import json
+                        order.mixed_categories = json.dumps(categories)
+                    order.save(update_fields=['type', 'mixed_categories'])
+                    logger.info(f"Updated order {order.id} type to {detected_order_type}, categories: {categories}")
+                except Exception as e:
+                    logger.warning(f"Failed to update order type from detected items: {e}")
+
             # Create payment record if total > 0
             if inv.total_amount > 0:
                 try:
