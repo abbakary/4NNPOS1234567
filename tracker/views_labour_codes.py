@@ -1,5 +1,6 @@
 import csv
 import io
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
@@ -8,6 +9,14 @@ from django.db import transaction, models
 from django.views.decorators.http import require_http_methods
 from .models import LabourCode
 from .forms import LabourCodeForm, LabourCodeCSVImportForm
+
+logger = logging.getLogger(__name__)
+
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
 
 
 @login_required
