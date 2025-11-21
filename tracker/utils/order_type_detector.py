@@ -16,8 +16,9 @@ def determine_order_type_from_codes(item_codes: List[str]) -> Tuple[str, List[st
     Determine order type based on invoice item codes.
 
     Logic:
-    - If item code found in LabourCode table -> map to its category
-    - If item code NOT found -> treat as 'sales'
+    - LabourCode table stores: SERVICE (tyre/service codes) and LABOUR (labour codes)
+    - If item code found in LabourCode table -> map to its category (service or labour)
+    - If item code NOT found -> treat as 'sales' (unmapped products/items)
     - If mixed categories detected -> 'mixed' type with all categories
 
     Args:
@@ -26,18 +27,18 @@ def determine_order_type_from_codes(item_codes: List[str]) -> Tuple[str, List[st
     Returns:
         Tuple of:
         - order_type: 'labour', 'service', 'sales', or 'mixed'
-        - categories: List of unique categories found
+        - categories: List of unique categories found (includes "sales" for unmapped)
         - mapping_info: Dict with code->category mappings and unmapped codes
     """
     if not item_codes:
-        return 'sales', [], {'mapped': {}, 'unmapped': [], 'categories_found': []}
+        return 'sales', [], {'mapped': {}, 'unmapped': [], 'categories_found': [], 'order_types_found': []}
 
     from tracker.models import LabourCode
 
     # Clean and normalize codes
     cleaned_codes = [str(code).strip() for code in item_codes if code]
     if not cleaned_codes:
-        return 'sales', [], {'mapped': {}, 'unmapped': [], 'categories_found': []}
+        return 'sales', [], {'mapped': {}, 'unmapped': [], 'categories_found': [], 'order_types_found': []}
 
     # Query database for matching labour codes
     found_codes = LabourCode.objects.filter(
@@ -63,26 +64,24 @@ def determine_order_type_from_codes(item_codes: List[str]) -> Tuple[str, List[st
         if code not in found_code_set:
             unmapped_codes.append(code)
 
-    # If there are unmapped codes, include 'sales' in the mix
     has_unmapped = len(unmapped_codes) > 0
 
-    # Normalize all categories to order types
+    # Determine order types based on mapped categories
     order_types_found = set()
-    normalized_categories = {}
 
     for category in categories_found:
         order_type = _normalize_category_to_order_type(category)
         order_types_found.add(order_type)
-        normalized_categories[category] = order_type
 
     # Add sales if there are unmapped codes
     if has_unmapped:
         order_types_found.add('sales')
+        categories_found.add('sales')
 
     # Determine final order type
     if len(order_types_found) == 0:
         final_order_type = 'sales'
-        final_categories = []
+        final_categories = ['sales']
     elif len(order_types_found) == 1:
         final_order_type = list(order_types_found)[0]
         final_categories = sorted(list(categories_found))
@@ -100,7 +99,7 @@ def determine_order_type_from_codes(item_codes: List[str]) -> Tuple[str, List[st
     logger.info(
         f"Order type detection: codes={cleaned_codes}, "
         f"categories={final_categories}, type={final_order_type}, "
-        f"has_unmapped={has_unmapped}"
+        f"mapped={len(code_to_category)}, unmapped={len(unmapped_codes)}"
     )
 
     return final_order_type, final_categories, mapping_info
