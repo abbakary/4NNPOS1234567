@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.template.loader import render_to_string
 from django.contrib.auth.views import LoginView
 from datetime import timedelta
-from .forms import ProfileForm, CustomerStep1Form, CustomerStep2Form, CustomerStep3Form, CustomerStep4Form, VehicleForm, OrderForm, CustomerEditForm, SystemSettingsForm, BrandForm
+from .forms import ProfileForm, CustomerStep1Form, CustomerStep2Form, CustomerStep3Form, CustomerStep4Form, VehicleForm, OrderForm, CustomerEditForm, SystemSettingsForm, BrandForm, InquiryCreationForm, InquiryNoteForm
 from django.urls import reverse
 from django.contrib import messages
 from django.core.cache import cache
