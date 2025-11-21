@@ -47,16 +47,6 @@ class OrderStartModal {
       });
     }
 
-    // Order type selection
-    document.querySelectorAll('.order-type-option').forEach(option => {
-      option.addEventListener('click', function(e) {
-        e.preventDefault();
-        const input = this.querySelector('input[type="radio"]');
-        input.checked = true;
-        self.handleOrderTypeChange();
-      });
-    });
-
     // Customer type selection
     document.querySelectorAll('.customer-type-option').forEach(option => {
       option.addEventListener('click', function(e) {
