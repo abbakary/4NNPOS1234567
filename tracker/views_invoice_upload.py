@@ -5,6 +5,7 @@ Handles two-step process: extract preview → create/update records
 
 import json
 import logging
+import re
 from decimal import Decimal
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
