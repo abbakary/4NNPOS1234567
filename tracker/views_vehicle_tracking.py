@@ -140,7 +140,9 @@ def api_vehicle_tracking_data(request):
             logger.info(f"Vehicles found after search filter: {vehicles_query.count()}")
         
         vehicle_data = []
-        
+
+        logger.info(f"Processing {vehicles_query.count()} vehicles from query")
+
         for vehicle in vehicles_query:
             # Get all invoices for this vehicle in the date range
             invoices = vehicle.invoices.filter(
