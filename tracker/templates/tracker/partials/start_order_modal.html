@@ -33,34 +33,10 @@
             <div id="plateCheckResult" class="mt-2"></div>
           </div>
 
-          <div class="mb-4">
-            <label class="form-label fw-bold">Order Type</label>
-            <div class="d-flex gap-2 flex-wrap">
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="orderType" id="typeService" value="service" checked>
-                <label class="form-check-label" for="typeService">
-                  <i class="fa fa-wrench me-1"></i>Service
-                </label>
-              </div>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="orderType" id="typeSales" value="sales">
-                <label class="form-check-label" for="typeSales">
-                  <i class="fa fa-shopping-cart me-1"></i>Sales
-                </label>
-              </div>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="orderType" id="typeInquiry" value="inquiry">
-                <label class="form-check-label" for="typeInquiry">
-                  <i class="fa fa-question-circle me-1"></i>Inquiry
-                </label>
-              </div>
-            </div>
-          </div>
-
           <div class="alert alert-light border-start border-4" style="border-color: #667eea !important;">
             <small class="text-muted">
               <strong>Next Steps:</strong><br>
-              After starting, you can immediately upload an invoice to auto-extract customer, vehicle, and service details, or continue manually.
+              After starting, you can immediately upload an invoice to auto-extract customer, vehicle, order type, and service details, or continue manually.
             </small>
           </div>
         </form>
@@ -90,7 +66,6 @@
 <script>
 function resetStartOrderForm() {
   document.getElementById('startOrderForm').reset();
-  document.getElementById('typeService').checked = true;
   document.getElementById('plateNumber').value = '';
   document.getElementById('startOrderBody').style.display = 'block';
   document.getElementById('startOrderLoading').style.display = 'none';
@@ -104,7 +79,7 @@ function submitStartOrder(event) {
   event.preventDefault();
 
   const plateNumber = document.getElementById('plateNumber').value.trim().toUpperCase();
-  const orderType = document.querySelector('input[name="orderType"]:checked').value;
+  const orderType = 'service';
 
   if (!plateNumber) {
     alert('Please enter a vehicle plate number');
