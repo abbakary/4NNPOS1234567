@@ -440,13 +440,20 @@ def api_create_invoice_from_upload(request):
             if not plate:
                 reference = request.POST.get('reference', '').strip().upper()
                 if reference:
-                    # Check if reference looks like a plate number
+                    # Remove 'FOR' prefix if present (common in invoices like "FOR T 290 EJF")
+                    cleaned_ref = reference
+                    if cleaned_ref.startswith('FOR '):
+                        cleaned_ref = cleaned_ref[4:].strip()
+                    elif cleaned_ref.startswith('FOR'):
+                        cleaned_ref = cleaned_ref[3:].strip()
+
+                    # Check if cleaned reference looks like a plate number
                     # Typical format: 2-3 letters + 3-4 digits (e.g., ABC123, T123ABC)
-                    if re.match(r'^[A-Z]{1,3}\s*-?\s*\d{1,4}[A-Z]?$', reference) or \
-                       re.match(r'^[A-Z]{1,3}\d{3,4}$', reference) or \
-                       re.match(r'^\d{1,4}[A-Z]{2,3}$', reference):
-                        plate = reference.replace('-', '').replace(' ', '')
-                        logger.info(f"Extracted vehicle plate from reference field: {plate}")
+                    if re.match(r'^[A-Z]{1,3}\s*-?\s*\d{1,4}[A-Z]?$', cleaned_ref) or \
+                       re.match(r'^[A-Z]{1,3}\d{3,4}$', cleaned_ref) or \
+                       re.match(r'^\d{1,4}[A-Z]{2,3}$', cleaned_ref):
+                        plate = cleaned_ref.replace('-', '').replace(' ', '')
+                        logger.info(f"Extracted vehicle plate from reference field: {plate} (original: {reference})")
 
             # Get or create vehicle if plate provided
             # The plate number is extracted from the invoice Reference field
