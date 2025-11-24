@@ -437,6 +437,8 @@ def api_create_invoice_from_upload(request):
 
             # Extract plate from reference if not explicitly provided
             # The reference field from invoice may contain the vehicle plate number
+            # This is important for vehicle tracking - we use the actual plate from the invoice
+            extracted_plate_from_reference = None
             if not plate:
                 reference = request.POST.get('reference', '').strip().upper()
                 if reference:
@@ -453,6 +455,7 @@ def api_create_invoice_from_upload(request):
                        re.match(r'^[A-Z]{1,3}\d{3,4}$', cleaned_ref) or \
                        re.match(r'^\d{1,4}[A-Z]{2,3}$', cleaned_ref):
                         plate = cleaned_ref.replace('-', '').replace(' ', '')
+                        extracted_plate_from_reference = plate
                         logger.info(f"Extracted vehicle plate from reference field: {plate} (original: {reference})")
 
             # Get or create vehicle if plate provided
