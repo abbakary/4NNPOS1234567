@@ -779,6 +779,22 @@ def api_create_invoice_from_upload(request):
                 except Exception as e:
                     logger.warning(f"Failed to create OrderInvoiceLink for additional invoice: {e}")
 
+            # Update started order with extracted plate if it differs from the started order's plate
+            # This ensures vehicle tracking uses the actual plate from the invoice, not the one used to start
+            if order and extracted_plate_from_reference and customer_obj:
+                try:
+                    order = OrderService.update_order_vehicle_from_plate(
+                        order=order,
+                        new_plate_number=extracted_plate_from_reference,
+                        customer=customer_obj,
+                        make=None,
+                        model=None,
+                        vehicle_type=None
+                    )
+                    logger.info(f"Updated order {order.id} vehicle from extracted invoice reference: {extracted_plate_from_reference}")
+                except Exception as e:
+                    logger.warning(f"Failed to update order vehicle from extracted plate: {e}")
+
             # Update started order with invoice data
             try:
                 order = OrderService.update_order_from_invoice(
