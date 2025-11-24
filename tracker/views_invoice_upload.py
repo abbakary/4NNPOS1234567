@@ -699,7 +699,6 @@ def api_create_invoice_from_upload(request):
                 try:
                     order.type = detected_order_type
                     if detected_order_type == 'mixed' and categories:
-                        import json
                         order.mixed_categories = json.dumps(categories)
                     order.save(update_fields=['type', 'mixed_categories'])
                     logger.info(f"Updated order {order.id} type to {detected_order_type}, categories: {categories}")
